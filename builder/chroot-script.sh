@@ -130,8 +130,8 @@ apt-get install -y \
   "libraspberrypi-dev=${KERNEL_BUILD}" \
   "libraspberrypi-bin=${KERNEL_BUILD}"
 
-# add user pirate to group video (for using the Raspberry Pi camera)
-usermod -a -G video pirate
+# add user prisms to group video (for using the Raspberry Pi camera)
+usermod -a -G video prisms
 
 # enable serial console
 printf "# Spawn a getty on Raspberry Pi serial line\nT0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100\n" >> /etc/inittab
@@ -177,7 +177,8 @@ apt-get install -y \
 apt-get install -y \
   --no-install-recommends \
   bluetooth \
-  pi-bluetooth
+  pi-bluetooth \
+  libbluetooth-dev
 
 # ensure compatibility with Docker install.sh, so `raspbian` will be detected correctly
 apt-get install -y \
@@ -193,10 +194,28 @@ apt-get install -y \
 #TODO: pin package version to ${DOCKER_ENGINE_VERSION}
 curl -sSL https://get.docker.com | /bin/sh
 
-
 echo "Installing rpi-serial-console script"
 wget -q https://raw.githubusercontent.com/lurch/rpi-serial-console/master/rpi-serial-console -O usr/local/bin/rpi-serial-console
 chmod +x usr/local/bin/rpi-serial-console
+
+# install Home Assistant dependencies
+apt-get install -y \
+  python3 \
+  python3-venv \
+  python3-pip
+
+# create home assistant user
+groupadd -f -r -g 1001 homeassistant
+useradd -u 1001 -g 1001 -rm homeassistant
+
+# install home assistant
+su homeassistant -s /bin/bash -c "python3 -m venv /srv/homeassistant && source /srv/homeassistant/bin/activate && pip3 install homeassistant" && \
+  systemctl enable home-assistant@homeassistant.service && \
+  systemctl start home-assistant@homeassistant.service
+
+# install mosquitto
+apt-get install -y \
+  mosquitto
 
 # cleanup APT cache and lists
 apt-get clean
